@@ -16,6 +16,14 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
+## Primer administrador (bootstrap)
+
+1. Definí `SETUP_TOKEN` en `.env` (string largo y aleatorio; no lo subas al repo).
+2. Con la base vacía (`usuarios` sin filas), el backend expone:
+   - `GET /api/v1/auth/bootstrap-status` → `{ "allowed": true }` solo si no hay usuarios **y** `SETUP_TOKEN` está configurado (mínimo 8 caracteres).
+   - `POST /api/v1/auth/bootstrap` con JSON `{ "username", "password", "setup_token" }` crea el primer usuario con rol `Admin`.
+3. Tras el primer login, rotá o vaciá `SETUP_TOKEN` en el servidor (p. ej. Render) para deshabilitar el endpoint.
+
 ## Ejecutar
 ```bash
 uvicorn app.main:app --reload

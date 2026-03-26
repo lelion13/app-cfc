@@ -8,12 +8,14 @@ import { JugadorFormPage } from "./pages/JugadorFormPage";
 import { JugadoresPage } from "./pages/JugadoresPage";
 import { LoginPage } from "./pages/LoginPage";
 import { PagosPage } from "./pages/PagosPage";
+import { SetupPage } from "./pages/SetupPage";
 import { UsuariosPage } from "./pages/UsuariosPage";
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/setup" element={<SetupPage />} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/jugadores" element={<ProtectedRoute><JugadoresPage /></ProtectedRoute>} />
       <Route path="/jugadores/nuevo" element={<ProtectedRoute><JugadorFormPage /></ProtectedRoute>} />
