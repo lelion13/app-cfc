@@ -75,5 +75,9 @@ def delete_pago(id_pago: int, db: Session = Depends(get_db), _user=Depends(requi
     if not pago:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     db.delete(pago)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cannot delete pago")
     return None
