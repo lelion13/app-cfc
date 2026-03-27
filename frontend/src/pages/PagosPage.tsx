@@ -34,6 +34,14 @@ function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function currentMonth() {
+  return String(new Date().getMonth() + 1);
+}
+
+function currentYear() {
+  return String(new Date().getFullYear());
+}
+
 export function PagosPage() {
   const api = useApi();
   const { user } = useAuth();
@@ -46,8 +54,8 @@ export function PagosPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   const [idJugador, setIdJugador] = useState("");
-  const [mes, setMes] = useState("");
-  const [anio, setAnio] = useState("");
+  const [mes, setMes] = useState(currentMonth());
+  const [anio, setAnio] = useState(currentYear());
   const [fromFecha, setFromFecha] = useState("");
   const [toFecha, setToFecha] = useState("");
 
@@ -56,8 +64,8 @@ export function PagosPage() {
     id_item_pago: "",
     fecha_pago: todayIsoDate(),
     monto: "",
-    mes_correspondiente: "",
-    anio_correspondiente: "",
+    mes_correspondiente: currentMonth(),
+    anio_correspondiente: currentYear(),
     metodo_pago: "",
     comprobante_url: ""
   });
@@ -144,8 +152,8 @@ export function PagosPage() {
       id_item_pago: "",
       fecha_pago: todayIsoDate(),
       monto: "",
-      mes_correspondiente: "",
-      anio_correspondiente: "",
+      mes_correspondiente: currentMonth(),
+      anio_correspondiente: currentYear(),
       metodo_pago: "",
       comprobante_url: ""
     });
@@ -244,8 +252,8 @@ export function PagosPage() {
               className="rounded-lg border px-3 py-2 text-sm"
               onClick={() => {
                 setIdJugador("");
-                setMes("");
-                setAnio("");
+                setMes(currentMonth());
+                setAnio(currentYear());
                 setFromFecha("");
                 setToFecha("");
               }}

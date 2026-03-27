@@ -4,6 +4,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ArancelesPage } from "./pages/ArancelesPage";
 import { CategoriasPage } from "./pages/CategoriasPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { IngresosPage } from "./pages/IngresosPage";
 import { JugadorDetailPage } from "./pages/JugadorDetailPage";
 import { JugadorFormPage } from "./pages/JugadorFormPage";
 import { JugadoresPage } from "./pages/JugadoresPage";
@@ -23,6 +24,7 @@ export default function App() {
       <Route path="/jugadores/:id/editar" element={<ProtectedRoute><JugadorFormPage /></ProtectedRoute>} />
       <Route path="/jugadores/:id" element={<ProtectedRoute><JugadorDetailPage /></ProtectedRoute>} />
       <Route path="/pagos" element={<ProtectedRoute><PagosPage /></ProtectedRoute>} />
+      <Route path="/ingresos" element={<ProtectedRoute allowRoles={["Admin", "Coordinador"]}><IngresosPage /></ProtectedRoute>} />
       <Route path="/aranceles" element={<ProtectedRoute allowRoles={["Admin"]}><ArancelesPage /></ProtectedRoute>} />
       <Route path="/categorias" element={<ProtectedRoute><CategoriasPage /></ProtectedRoute>} />
       <Route path="/usuarios" element={<ProtectedRoute allowRoles={["Admin"]}><UsuariosPage /></ProtectedRoute>} />
