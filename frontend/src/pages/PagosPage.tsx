@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { JugadorCombobox } from "../components/JugadorCombobox";
 import { Layout } from "../components/Layout";
 import { ApiError, useApi } from "../lib/api";
 import { useAuth } from "../state/auth";
@@ -14,6 +15,7 @@ type PrecioItem = {
   activo: boolean;
 };
 type Jugador = { id_jugador: number; nombre: string; apellido: string; id_categoria: number };
+const PAYMENT_METHODS = ["Efectivo", "Transferencia"] as const;
 type PagoItem = {
   id_pago: number;
   id_jugador: number;
@@ -46,7 +48,7 @@ export function PagosPage() {
   const api = useApi();
   const { user } = useAuth();
   const [items, setItems] = useState<PagoItem[]>([]);
-  const [jugadores, setJugadores] = useState<Jugador[]>([]);
+  const [jugadorFormMeta, setJugadorFormMeta] = useState<Jugador | null>(null);
   const [itemsPago, setItemsPago] = useState<ItemPago[]>([]);
   const [precioSugerido, setPrecioSugerido] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,7 +68,7 @@ export function PagosPage() {
     monto: "",
     mes_correspondiente: currentMonth(),
     anio_correspondiente: currentYear(),
-    metodo_pago: "",
+    metodo_pago: "Efectivo",
     comprobante_url: ""
   });
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -102,11 +104,23 @@ export function PagosPage() {
   }, [api, query]);
 
   useEffect(() => {
+    if (!form.id_jugador) {
+      setJugadorFormMeta(null);
+      return;
+    }
+    let cancelled = false;
     api
-      .get<{ items: Jugador[] }>("/jugadores?page=1&page_size=100&activo=true")
-      .then((res) => setJugadores(res.items ?? []))
-      .catch(() => setJugadores([]));
-  }, [api]);
+      .get<Jugador>(`/jugadores/${form.id_jugador}`)
+      .then((j) => {
+        if (!cancelled) setJugadorFormMeta(j);
+      })
+      .catch(() => {
+        if (!cancelled) setJugadorFormMeta(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, form.id_jugador]);
 
   useEffect(() => {
     api
@@ -120,11 +134,11 @@ export function PagosPage() {
       setPrecioSugerido(null);
       return;
     }
-    const jugador = jugadores.find((j) => j.id_jugador === Number(form.id_jugador));
-    if (!jugador) {
+    if (!jugadorFormMeta) {
       setPrecioSugerido(null);
       return;
     }
+    const jugador = jugadorFormMeta;
     const fecha = form.fecha_pago || todayIsoDate();
     const qs = new URLSearchParams({
       item_id: form.id_item_pago,
@@ -144,7 +158,7 @@ export function PagosPage() {
         setForm((f) => ({ ...f, monto: String(candidato.monto) }));
       })
       .catch(() => setPrecioSugerido(null));
-  }, [api, form.id_item_pago, form.id_jugador, form.fecha_pago, jugadores]);
+  }, [api, form.id_item_pago, form.id_jugador, form.fecha_pago, jugadorFormMeta]);
 
   function resetForm() {
     setForm({
@@ -154,7 +168,7 @@ export function PagosPage() {
       monto: "",
       mes_correspondiente: currentMonth(),
       anio_correspondiente: currentYear(),
-      metodo_pago: "",
+      metodo_pago: "Efectivo",
       comprobante_url: ""
     });
     setPrecioSugerido(null);
@@ -164,6 +178,10 @@ export function PagosPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMessage(null);
+    if (!form.id_jugador.trim()) {
+      setMessage("Seleccioná un jugador de la lista de resultados");
+      return;
+    }
     const payload: any = {
       id_jugador: Number(form.id_jugador),
       mes_correspondiente: Number(form.mes_correspondiente),
@@ -201,7 +219,7 @@ export function PagosPage() {
       monto: String(p.monto ?? ""),
       mes_correspondiente: String(p.mes_correspondiente ?? ""),
       anio_correspondiente: String(p.anio_correspondiente ?? ""),
-      metodo_pago: p.metodo_pago ?? "",
+      metodo_pago: PAYMENT_METHODS.includes(p.metodo_pago as (typeof PAYMENT_METHODS)[number]) ? p.metodo_pago : "Efectivo",
       comprobante_url: p.comprobante_url ?? ""
     });
   }
@@ -231,14 +249,9 @@ export function PagosPage() {
           <h1 className="text-xl font-semibold">Pagos</h1>
           <p className="text-sm text-slate-600">ABM completo con filtros y permisos por rol.</p>
           <div className="grid md:grid-cols-5 gap-2">
-            <select className="rounded-lg border px-3 py-2 text-sm" value={idJugador} onChange={(e) => setIdJugador(e.target.value)}>
-              <option value="">Jugador</option>
-              {jugadores.map((j) => (
-                <option key={j.id_jugador} value={String(j.id_jugador)}>
-                  {j.apellido}, {j.nombre}
-                </option>
-              ))}
-            </select>
+            <div className="md:col-span-2">
+              <JugadorCombobox value={idJugador} onChange={setIdJugador} api={api} placeholder="Filtrar por jugador…" />
+            </div>
             <input className="rounded-lg border px-3 py-2 text-sm" placeholder="Mes" value={mes} onChange={(e) => setMes(e.target.value)} />
             <input className="rounded-lg border px-3 py-2 text-sm" placeholder="Año" value={anio} onChange={(e) => setAnio(e.target.value)} />
             <input type="date" className="rounded-lg border px-3 py-2 text-sm" value={fromFecha} onChange={(e) => setFromFecha(e.target.value)} />
@@ -265,14 +278,14 @@ export function PagosPage() {
 
         <div className="rounded-2xl border bg-white p-6">
           <form onSubmit={onSubmit} className="grid md:grid-cols-4 gap-2 text-sm">
-            <select className="rounded-lg border px-3 py-2" value={form.id_jugador} onChange={(e) => setForm((f) => ({ ...f, id_jugador: e.target.value }))} required>
-              <option value="">Jugador</option>
-              {jugadores.map((j) => (
-                <option key={j.id_jugador} value={String(j.id_jugador)}>
-                  {j.apellido}, {j.nombre}
-                </option>
-              ))}
-            </select>
+            <JugadorCombobox
+              value={form.id_jugador}
+              onChange={(id) => setForm((f) => ({ ...f, id_jugador: id }))}
+              api={api}
+              required
+              placeholder="Buscar jugador…"
+              inputClassName="rounded-lg border px-3 py-2 w-full"
+            />
             <input type="date" className="rounded-lg border px-3 py-2" value={form.fecha_pago} onChange={(e) => setForm((f) => ({ ...f, fecha_pago: e.target.value }))} />
             <select className="rounded-lg border px-3 py-2" value={form.id_item_pago} onChange={(e) => setForm((f) => ({ ...f, id_item_pago: e.target.value }))} required={!editingId}>
               <option value="">Ítem tabulado</option>
@@ -284,7 +297,13 @@ export function PagosPage() {
             </select>
             <input className="rounded-lg border px-3 py-2" placeholder="Mes" value={form.mes_correspondiente} onChange={(e) => setForm((f) => ({ ...f, mes_correspondiente: e.target.value }))} required />
             <input className="rounded-lg border px-3 py-2" placeholder="Año" value={form.anio_correspondiente} onChange={(e) => setForm((f) => ({ ...f, anio_correspondiente: e.target.value }))} required />
-            <input className="rounded-lg border px-3 py-2" placeholder="Método de pago" value={form.metodo_pago} onChange={(e) => setForm((f) => ({ ...f, metodo_pago: e.target.value }))} required />
+            <select className="rounded-lg border px-3 py-2" value={form.metodo_pago} onChange={(e) => setForm((f) => ({ ...f, metodo_pago: e.target.value }))} required>
+              {PAYMENT_METHODS.map((method) => (
+                <option key={method} value={method}>
+                  {method}
+                </option>
+              ))}
+            </select>
             <input className="rounded-lg border px-3 py-2 md:col-span-2" placeholder="Comprobante URL (opcional)" value={form.comprobante_url} onChange={(e) => setForm((f) => ({ ...f, comprobante_url: e.target.value }))} />
             {form.id_item_pago && (
               <div className="md:col-span-4 text-xs text-slate-600">

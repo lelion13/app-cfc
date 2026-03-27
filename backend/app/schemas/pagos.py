@@ -1,6 +1,9 @@
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel, Field, HttpUrl
+
+MetodoPago = Literal["Efectivo", "Transferencia"]
 
 
 class PagoCreate(BaseModel):
@@ -10,7 +13,7 @@ class PagoCreate(BaseModel):
     monto: float | None = Field(default=None, gt=0)
     mes_correspondiente: int = Field(ge=1, le=12)
     anio_correspondiente: int = Field(ge=2000, le=2100)
-    metodo_pago: str = Field(min_length=1, max_length=80)
+    metodo_pago: MetodoPago
     comprobante_url: HttpUrl | None = None
 
 
@@ -20,7 +23,7 @@ class PagoUpdate(BaseModel):
     monto: float | None = Field(default=None, gt=0)
     mes_correspondiente: int | None = Field(default=None, ge=1, le=12)
     anio_correspondiente: int | None = Field(default=None, ge=2000, le=2100)
-    metodo_pago: str | None = Field(default=None, min_length=1, max_length=80)
+    metodo_pago: MetodoPago | None = None
     comprobante_url: HttpUrl | None = None
 
 
