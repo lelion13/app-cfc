@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-type Role = "Admin" | "Coordinador";
+type Role = "Admin" | "Coordinador" | "Operador";
 export type UserMe = {
   id_usuario: number;
   username: string;

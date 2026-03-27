@@ -11,7 +11,7 @@ router = APIRouter(prefix="/categorias", tags=["categorias"])
 
 
 @router.get("", response_model=list[CategoriaOut])
-def list_categorias(q: str | None = Query(default=None, min_length=1, max_length=80), db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
+def list_categorias(q: str | None = Query(default=None, min_length=1, max_length=80), db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador, RolUsuario.Operador))):
     qry = db.query(Categoria)
     if q:
         qry = qry.filter(Categoria.descripcion.ilike(f"%{q}%"))
@@ -32,7 +32,7 @@ def create_categoria(body: CategoriaCreate, db: Session = Depends(get_db), _user
 
 
 @router.get("/{id_categoria}", response_model=CategoriaOut)
-def get_categoria(id_categoria: int, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
+def get_categoria(id_categoria: int, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador, RolUsuario.Operador))):
     cat = db.get(Categoria, id_categoria)
     if not cat:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
@@ -56,7 +56,7 @@ def update_categoria(id_categoria: int, body: CategoriaUpdate, db: Session = Dep
 
 
 @router.delete("/{id_categoria}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_categoria(id_categoria: int, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin))):
+def delete_categoria(id_categoria: int, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
     cat = db.get(Categoria, id_categoria)
     if not cat:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")

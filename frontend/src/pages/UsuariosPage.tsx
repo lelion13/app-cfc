@@ -3,7 +3,7 @@ import { Layout } from "../components/Layout";
 import { ApiError, useApi } from "../lib/api";
 import { useAuth } from "../state/auth";
 
-type Rol = "Admin" | "Coordinador";
+type Rol = "Admin" | "Coordinador" | "Operador";
 
 type UserRow = {
   id_usuario: number;
@@ -143,6 +143,7 @@ export function UsuariosPage() {
               minLength={10}
             />
             <select className="rounded-lg border px-3 py-2 text-sm" value={newRol} onChange={e => setNewRol(e.target.value as Rol)}>
+              <option value="Operador">Operador</option>
               <option value="Coordinador">Coordinador</option>
               <option value="Admin">Admin</option>
             </select>
@@ -174,6 +175,7 @@ export function UsuariosPage() {
                     <td className="py-2 pr-2">
                       {editingId === u.id_usuario ? (
                         <select className="rounded border px-2 py-1 text-sm" value={editRol} onChange={e => setEditRol(e.target.value as Rol)}>
+                          <option value="Operador">Operador</option>
                           <option value="Coordinador">Coordinador</option>
                           <option value="Admin">Admin</option>
                         </select>

@@ -87,7 +87,7 @@ export function CategoriasPage() {
                   ) : (
                     <>
                       <button className="rounded border px-2 py-1" onClick={() => { setEditingId(c.id_categoria); setEditingDesc(c.descripcion); }}>Editar</button>
-                      {user?.rol === "Admin" && <button className="rounded border px-2 py-1 text-red-700" onClick={() => removeCategoria(c)}>Eliminar</button>}
+                      {(user?.rol === "Admin" || user?.rol === "Coordinador") && <button className="rounded border px-2 py-1 text-red-700" onClick={() => removeCategoria(c)}>Eliminar</button>}
                     </>
                   )}
                 </td>

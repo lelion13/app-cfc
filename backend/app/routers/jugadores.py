@@ -12,7 +12,7 @@ router = APIRouter(prefix="/jugadores", tags=["jugadores"])
 
 
 @router.get("", response_model=Page[JugadorOut])
-def list_jugadores(id_categoria: int | None = None, activo: bool | None = None, q: str | None = Query(default=None, min_length=1, max_length=80), page: int = Query(default=1, ge=1), page_size: int = Query(default=20, ge=1, le=100), db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
+def list_jugadores(id_categoria: int | None = None, activo: bool | None = None, q: str | None = Query(default=None, min_length=1, max_length=80), page: int = Query(default=1, ge=1), page_size: int = Query(default=20, ge=1, le=100), db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador, RolUsuario.Operador))):
     base = db.query(Jugador).options(joinedload(Jugador.categoria))
     if id_categoria is not None:
         base = base.filter(Jugador.id_categoria == id_categoria)
@@ -27,7 +27,7 @@ def list_jugadores(id_categoria: int | None = None, activo: bool | None = None, 
 
 
 @router.post("", response_model=JugadorOut, status_code=status.HTTP_201_CREATED)
-def create_jugador(body: JugadorCreate, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
+def create_jugador(body: JugadorCreate, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador, RolUsuario.Operador))):
     if not db.get(Categoria, body.id_categoria):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Categoria not found")
     jugador = Jugador(**body.model_dump())
@@ -42,7 +42,7 @@ def create_jugador(body: JugadorCreate, db: Session = Depends(get_db), _user=Dep
 
 
 @router.get("/{id_jugador}", response_model=JugadorOut)
-def get_jugador(id_jugador: int, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
+def get_jugador(id_jugador: int, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador, RolUsuario.Operador))):
     jugador = db.query(Jugador).options(joinedload(Jugador.categoria)).filter(Jugador.id_jugador == id_jugador).one_or_none()
     if not jugador:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
@@ -50,7 +50,7 @@ def get_jugador(id_jugador: int, db: Session = Depends(get_db), _user=Depends(re
 
 
 @router.patch("/{id_jugador}", response_model=JugadorOut)
-def update_jugador(id_jugador: int, body: JugadorUpdate, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
+def update_jugador(id_jugador: int, body: JugadorUpdate, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador, RolUsuario.Operador))):
     jugador = db.get(Jugador, id_jugador)
     if not jugador:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
@@ -69,7 +69,7 @@ def update_jugador(id_jugador: int, body: JugadorUpdate, db: Session = Depends(g
 
 
 @router.delete("/{id_jugador}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_jugador(id_jugador: int, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin))):
+def delete_jugador(id_jugador: int, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
     jugador = db.get(Jugador, id_jugador)
     if not jugador:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")

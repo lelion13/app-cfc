@@ -73,7 +73,7 @@ export function PagosPage() {
   });
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const isAdmin = user?.rol === "Admin";
+  const canDeletePago = user?.rol === "Admin" || user?.rol === "Coordinador";
 
   const query = useMemo(() => {
     const p = new URLSearchParams();
@@ -226,7 +226,7 @@ export function PagosPage() {
 
   async function onDelete(p: PagoItem) {
     setMessage(null);
-    if (!isAdmin) {
+    if (!canDeletePago) {
       setMessage("No tenés permisos para eliminar pagos");
       return;
     }
@@ -360,7 +360,7 @@ export function PagosPage() {
                         <button className="rounded border px-2 py-1" onClick={() => startEdit(p)}>
                           Editar
                         </button>
-                        {isAdmin && (
+                        {canDeletePago && (
                           <button className="rounded border px-2 py-1 text-red-700" onClick={() => onDelete(p)}>
                             Eliminar
                           </button>

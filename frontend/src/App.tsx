@@ -25,8 +25,8 @@ export default function App() {
       <Route path="/jugadores/:id" element={<ProtectedRoute><JugadorDetailPage /></ProtectedRoute>} />
       <Route path="/pagos" element={<ProtectedRoute><PagosPage /></ProtectedRoute>} />
       <Route path="/ingresos" element={<ProtectedRoute allowRoles={["Admin", "Coordinador"]}><IngresosPage /></ProtectedRoute>} />
-      <Route path="/aranceles" element={<ProtectedRoute allowRoles={["Admin"]}><ArancelesPage /></ProtectedRoute>} />
-      <Route path="/categorias" element={<ProtectedRoute><CategoriasPage /></ProtectedRoute>} />
+      <Route path="/aranceles" element={<ProtectedRoute allowRoles={["Admin", "Coordinador"]}><ArancelesPage /></ProtectedRoute>} />
+      <Route path="/categorias" element={<ProtectedRoute allowRoles={["Admin", "Coordinador"]}><CategoriasPage /></ProtectedRoute>} />
       <Route path="/usuarios" element={<ProtectedRoute allowRoles={["Admin"]}><UsuariosPage /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

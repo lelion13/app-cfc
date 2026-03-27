@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-RolUsuarioLiteral = Literal["Admin", "Coordinador"]
+RolUsuarioLiteral = Literal["Admin", "Coordinador", "Operador"]
 
 
 class UserCreate(BaseModel):

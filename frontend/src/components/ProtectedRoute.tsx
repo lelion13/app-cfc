@@ -7,7 +7,7 @@ export function ProtectedRoute({
   allowRoles
 }: {
   children: React.ReactNode;
-  allowRoles?: Array<"Admin" | "Coordinador">;
+  allowRoles?: Array<"Admin" | "Coordinador" | "Operador">;
 }) {
   const { token, user, isLoading } = useAuth();
   if (isLoading) return <div className="min-h-screen grid place-items-center text-sm text-slate-600">Cargando…</div>;

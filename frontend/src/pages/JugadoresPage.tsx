@@ -88,7 +88,7 @@ export function JugadoresPage() {
                   <td className="py-2">{j.activo ? "Activo" : "Inactivo"}</td>
                   <td className="py-2 space-x-2">
                     <Link className="rounded border px-2 py-1" to={`/jugadores/${j.id_jugador}/editar`}>Editar</Link>
-                    {user?.rol === "Admin" && <button className="rounded border px-2 py-1 text-red-700" onClick={() => removeJugador(j)}>Eliminar</button>}
+                    {(user?.rol === "Admin" || user?.rol === "Coordinador") && <button className="rounded border px-2 py-1 text-red-700" onClick={() => removeJugador(j)}>Eliminar</button>}
                   </td>
                 </tr>
               ))}

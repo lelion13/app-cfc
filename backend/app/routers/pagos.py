@@ -35,7 +35,7 @@ def _resolve_precio_vigente(db: Session, *, id_item_pago: int, id_categoria: int
 
 
 @router.get("", response_model=list[PagoOut])
-def list_pagos(id_jugador: int | None = None, anio: int | None = Query(default=None, ge=2000, le=2100), mes: int | None = Query(default=None, ge=1, le=12), from_fecha: date | None = None, to_fecha: date | None = None, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
+def list_pagos(id_jugador: int | None = None, anio: int | None = Query(default=None, ge=2000, le=2100), mes: int | None = Query(default=None, ge=1, le=12), from_fecha: date | None = None, to_fecha: date | None = None, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador, RolUsuario.Operador))):
     qry = db.query(Pago).options(joinedload(Pago.jugador))
     if id_jugador is not None:
         qry = qry.filter(Pago.id_jugador == id_jugador)
@@ -51,7 +51,7 @@ def list_pagos(id_jugador: int | None = None, anio: int | None = Query(default=N
 
 
 @router.post("", response_model=PagoOut, status_code=status.HTTP_201_CREATED)
-def create_pago(body: PagoCreate, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
+def create_pago(body: PagoCreate, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador, RolUsuario.Operador))):
     jugador = db.get(Jugador, body.id_jugador)
     if not jugador:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Jugador not found")
@@ -99,7 +99,7 @@ def create_pago(body: PagoCreate, db: Session = Depends(get_db), _user=Depends(r
 
 
 @router.get("/{id_pago}", response_model=PagoOut)
-def get_pago(id_pago: int, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
+def get_pago(id_pago: int, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador, RolUsuario.Operador))):
     pago = db.query(Pago).options(joinedload(Pago.jugador)).filter(Pago.id_pago == id_pago).one_or_none()
     if not pago:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
@@ -107,7 +107,7 @@ def get_pago(id_pago: int, db: Session = Depends(get_db), _user=Depends(require_
 
 
 @router.patch("/{id_pago}", response_model=PagoOut)
-def update_pago(id_pago: int, body: PagoUpdate, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
+def update_pago(id_pago: int, body: PagoUpdate, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador, RolUsuario.Operador))):
     pago = db.get(Pago, id_pago)
     if not pago:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
@@ -134,7 +134,7 @@ def update_pago(id_pago: int, body: PagoUpdate, db: Session = Depends(get_db), _
 
 
 @router.delete("/{id_pago}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_pago(id_pago: int, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin))):
+def delete_pago(id_pago: int, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
     pago = db.get(Pago, id_pago)
     if not pago:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")

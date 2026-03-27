@@ -37,12 +37,12 @@ def _find_overlap(
 
 
 @router.get("", response_model=list[ItemPagoOut])
-def list_items_pago(db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
+def list_items_pago(db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador, RolUsuario.Operador))):
     return db.query(ItemPago).order_by(ItemPago.descripcion.asc()).all()
 
 
 @router.post("", response_model=ItemPagoOut, status_code=status.HTTP_201_CREATED)
-def create_item_pago(body: ItemPagoCreate, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin))):
+def create_item_pago(body: ItemPagoCreate, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
     item = ItemPago(**body.model_dump())
     db.add(item)
     try:
@@ -59,7 +59,7 @@ def update_item_pago(
     id_item_pago: int,
     body: ItemPagoUpdate,
     db: Session = Depends(get_db),
-    _user=Depends(require_role(RolUsuario.Admin)),
+    _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador)),
 ):
     item = db.get(ItemPago, id_item_pago)
     if not item:
@@ -81,7 +81,7 @@ def list_precios_item(
     id_categoria: int | None = Query(default=None),
     fecha: date | None = Query(default=None),
     db: Session = Depends(get_db),
-    _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador)),
+    _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador, RolUsuario.Operador)),
 ):
     q = db.query(PrecioItem)
     if item_id is not None:
@@ -98,7 +98,7 @@ def list_precios_item(
 
 
 @router.post("/precios", response_model=PrecioItemOut, status_code=status.HTTP_201_CREATED)
-def create_precio_item(body: PrecioItemCreate, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin))):
+def create_precio_item(body: PrecioItemCreate, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
     if body.vigencia_hasta is not None and body.vigencia_hasta < body.vigencia_desde:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid date range")
     if db.get(ItemPago, body.id_item_pago) is None:
@@ -129,7 +129,7 @@ def create_precio_item(body: PrecioItemCreate, db: Session = Depends(get_db), _u
 def create_precios_item_bulk(
     body: PrecioItemBulkCreate,
     db: Session = Depends(get_db),
-    _user=Depends(require_role(RolUsuario.Admin)),
+    _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador)),
 ):
     if body.vigencia_hasta is not None and body.vigencia_hasta < body.vigencia_desde:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid date range")
@@ -189,7 +189,7 @@ def update_precio_item(
     id_precio_item: int,
     body: PrecioItemUpdate,
     db: Session = Depends(get_db),
-    _user=Depends(require_role(RolUsuario.Admin)),
+    _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador)),
 ):
     precio = db.get(PrecioItem, id_precio_item)
     if not precio:

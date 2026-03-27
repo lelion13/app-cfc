@@ -15,6 +15,7 @@ class Base(DeclarativeBase):
 class RolUsuario(str, enum.Enum):
     Admin = "Admin"
     Coordinador = "Coordinador"
+    Operador = "Operador"
 
 
 class Categoria(Base):

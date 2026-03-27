@@ -77,7 +77,7 @@ CREATE INDEX IF NOT EXISTS ix_pagos_fecha ON pagos(fecha_pago);
 
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'rol_usuario') THEN
-    CREATE TYPE rol_usuario AS ENUM ('Admin', 'Coordinador');
+    CREATE TYPE rol_usuario AS ENUM ('Admin', 'Coordinador', 'Operador');
   END IF;
 END $$;
 
