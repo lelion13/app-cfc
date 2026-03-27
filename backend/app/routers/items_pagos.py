@@ -8,9 +8,32 @@ from sqlalchemy.orm import Session
 from app.db.models import ItemPago, PrecioItem, RolUsuario
 from app.db.session import get_db
 from app.deps.auth import require_role
-from app.schemas.items_pagos import ItemPagoCreate, ItemPagoOut, ItemPagoUpdate, PrecioItemCreate, PrecioItemOut, PrecioItemUpdate
+from app.schemas.items_pagos import ItemPagoCreate, ItemPagoOut, ItemPagoUpdate, PrecioItemBulkCreate, PrecioItemCreate, PrecioItemOut, PrecioItemUpdate
 
 router = APIRouter(prefix="/items-pago", tags=["items-pago"])
+
+
+def _find_overlap(
+    db: Session,
+    *,
+    id_item_pago: int,
+    id_categoria: int | None,
+    vigencia_desde: date,
+    vigencia_hasta: date | None,
+) -> PrecioItem | None:
+    return (
+        db.query(PrecioItem)
+        .filter(
+            PrecioItem.id_item_pago == id_item_pago,
+            PrecioItem.id_categoria.is_(None) if id_categoria is None else PrecioItem.id_categoria == id_categoria,
+            PrecioItem.activo.is_(True),
+            and_(
+                PrecioItem.vigencia_desde <= (vigencia_hasta or date.max),
+                or_(PrecioItem.vigencia_hasta.is_(None), PrecioItem.vigencia_hasta >= vigencia_desde),
+            ),
+        )
+        .first()
+    )
 
 
 @router.get("", response_model=list[ItemPagoOut])
@@ -81,18 +104,12 @@ def create_precio_item(body: PrecioItemCreate, db: Session = Depends(get_db), _u
     if db.get(ItemPago, body.id_item_pago) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
 
-    overlap = (
-        db.query(PrecioItem)
-        .filter(
-            PrecioItem.id_item_pago == body.id_item_pago,
-            PrecioItem.id_categoria.is_(None) if body.id_categoria is None else PrecioItem.id_categoria == body.id_categoria,
-            PrecioItem.activo.is_(True),
-            and_(
-                PrecioItem.vigencia_desde <= (body.vigencia_hasta or date.max),
-                or_(PrecioItem.vigencia_hasta.is_(None), PrecioItem.vigencia_hasta >= body.vigencia_desde),
-            ),
-        )
-        .first()
+    overlap = _find_overlap(
+        db,
+        id_item_pago=body.id_item_pago,
+        id_categoria=body.id_categoria,
+        vigencia_desde=body.vigencia_desde,
+        vigencia_hasta=body.vigencia_hasta,
     )
     if overlap is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Overlapping active vigencia for item/categoria")
@@ -106,6 +123,65 @@ def create_precio_item(body: PrecioItemCreate, db: Session = Depends(get_db), _u
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Precio already exists for vigencia_desde")
     db.refresh(precio)
     return precio
+
+
+@router.post("/precios/bulk", response_model=list[PrecioItemOut], status_code=status.HTTP_201_CREATED)
+def create_precios_item_bulk(
+    body: PrecioItemBulkCreate,
+    db: Session = Depends(get_db),
+    _user=Depends(require_role(RolUsuario.Admin)),
+):
+    if body.vigencia_hasta is not None and body.vigencia_hasta < body.vigencia_desde:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid date range")
+    if db.get(ItemPago, body.id_item_pago) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+
+    # Dedup categories preserving order.
+    seen: set[int] = set()
+    categorias: list[int] = []
+    for c in body.id_categorias:
+        if c not in seen:
+            seen.add(c)
+            categorias.append(c)
+
+    conflictos: list[int] = []
+    for id_categoria in categorias:
+        overlap = _find_overlap(
+            db,
+            id_item_pago=body.id_item_pago,
+            id_categoria=id_categoria,
+            vigencia_desde=body.vigencia_desde,
+            vigencia_hasta=body.vigencia_hasta,
+        )
+        if overlap is not None:
+            conflictos.append(id_categoria)
+    if conflictos:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"message": "Overlapping active vigencia for item/categoria", "id_categorias_conflicto": conflictos},
+        )
+
+    creados: list[PrecioItem] = []
+    try:
+        for id_categoria in categorias:
+            precio = PrecioItem(
+                id_item_pago=body.id_item_pago,
+                id_categoria=id_categoria,
+                monto=body.monto,
+                vigencia_desde=body.vigencia_desde,
+                vigencia_hasta=body.vigencia_hasta,
+                activo=body.activo,
+            )
+            db.add(precio)
+            creados.append(precio)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cannot create precios in bulk")
+
+    for precio in creados:
+        db.refresh(precio)
+    return creados
 
 
 @router.patch("/precios/{id_precio_item}", response_model=PrecioItemOut)

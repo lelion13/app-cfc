@@ -32,6 +32,15 @@ class PrecioItemCreate(BaseModel):
     activo: bool = True
 
 
+class PrecioItemBulkCreate(BaseModel):
+    id_item_pago: int
+    id_categorias: list[int] = Field(min_length=1)
+    monto: float = Field(gt=0)
+    vigencia_desde: date
+    vigencia_hasta: date | None = None
+    activo: bool = True
+
+
 class PrecioItemUpdate(BaseModel):
     monto: float | None = Field(default=None, gt=0)
     vigencia_desde: date | None = None

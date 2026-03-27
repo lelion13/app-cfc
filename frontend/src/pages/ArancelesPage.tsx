@@ -13,6 +13,7 @@ type PrecioItem = {
   activo: boolean;
 };
 type Categoria = { id_categoria: number; descripcion: string };
+type PrecioBulkConflictDetail = { message?: string; id_categorias_conflicto?: number[] };
 
 export function ArancelesPage() {
   const api = useApi();
@@ -26,7 +27,7 @@ export function ArancelesPage() {
   const [itemForm, setItemForm] = useState({ codigo: "", descripcion: "", activo: true });
   const [precioForm, setPrecioForm] = useState({
     id_item_pago: "",
-    id_categoria: "",
+    id_categorias: [] as string[],
     monto: "",
     vigencia_desde: "",
     vigencia_hasta: "",
@@ -75,9 +76,20 @@ export function ArancelesPage() {
   async function savePrecio(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
-    const payload = {
+    const selected = precioForm.id_categorias;
+    const includesGeneral = selected.includes("__general");
+    const selectedCategories = includesGeneral ? [] : selected;
+    const payloadSingle = {
       id_item_pago: Number(precioForm.id_item_pago),
-      id_categoria: precioForm.id_categoria ? Number(precioForm.id_categoria) : null,
+      id_categoria: selectedCategories[0] ? Number(selectedCategories[0]) : null,
+      monto: Number(precioForm.monto),
+      vigencia_desde: precioForm.vigencia_desde,
+      vigencia_hasta: precioForm.vigencia_hasta || null,
+      activo: precioForm.activo,
+    };
+    const payloadBulk = {
+      id_item_pago: Number(precioForm.id_item_pago),
+      id_categorias: selectedCategories.map(Number),
       monto: Number(precioForm.monto),
       vigencia_desde: precioForm.vigencia_desde,
       vigencia_hasta: precioForm.vigencia_hasta || null,
@@ -85,18 +97,31 @@ export function ArancelesPage() {
     };
     try {
       if (precioEditId) {
-        await api.patch(`/items-pago/precios/${precioEditId}`, payload);
+        await api.patch(`/items-pago/precios/${precioEditId}`, payloadSingle);
         setMsg("Precio actualizado");
       } else {
-        await api.post("/items-pago/precios", payload);
-        setMsg("Precio creado");
+        if (payloadBulk.id_categorias.length > 1) {
+          await api.post("/items-pago/precios/bulk", payloadBulk);
+          setMsg(`Precios creados para ${payloadBulk.id_categorias.length} categorías`);
+        } else {
+          await api.post("/items-pago/precios", payloadSingle);
+          setMsg("Precio creado");
+        }
       }
-      setPrecioForm({ id_item_pago: "", id_categoria: "", monto: "", vigencia_desde: "", vigencia_hasta: "", activo: true });
+      setPrecioForm({ id_item_pago: "", id_categorias: [], monto: "", vigencia_desde: "", vigencia_hasta: "", activo: true });
       setPrecioEditId(null);
       await load();
     } catch (err) {
       const e2 = err as ApiError;
-      if (e2.status === 409) setMsg("Vigencia superpuesta para item/categoría");
+      if (e2.status === 409) {
+        const detail = e2.detail as PrecioBulkConflictDetail | string | undefined;
+        if (detail && typeof detail === "object" && Array.isArray(detail.id_categorias_conflicto) && detail.id_categorias_conflicto.length > 0) {
+          const labels = detail.id_categorias_conflicto.map((id) => categorias.find((c) => c.id_categoria === id)?.descripcion ?? `#${id}`).join(", ");
+          setMsg(`Vigencia superpuesta para categorías: ${labels}`);
+        } else {
+          setMsg("Vigencia superpuesta para item/categoría");
+        }
+      }
       else setMsg("No se pudo guardar precio");
     }
   }
@@ -156,18 +181,26 @@ export function ArancelesPage() {
               <option value="">Item</option>
               {items.map((it) => <option key={it.id_item_pago} value={String(it.id_item_pago)}>{it.descripcion}</option>)}
             </select>
-            <select className="rounded-lg border px-3 py-2" value={precioForm.id_categoria} onChange={(e) => setPrecioForm((f) => ({ ...f, id_categoria: e.target.value }))}>
-              <option value="">Todas las categorías</option>
+            <select
+              className="rounded-lg border px-3 py-2 h-28"
+              value={precioForm.id_categorias}
+              multiple
+              onChange={(e) => setPrecioForm((f) => ({ ...f, id_categorias: Array.from(e.target.selectedOptions).map((o) => o.value) }))}
+            >
+              <option value="__general">General (todas las categorías)</option>
               {categorias.map((c) => <option key={c.id_categoria} value={String(c.id_categoria)}>{c.descripcion}</option>)}
             </select>
             <input className="rounded-lg border px-3 py-2" placeholder="Monto" value={precioForm.monto} onChange={(e) => setPrecioForm((f) => ({ ...f, monto: e.target.value }))} required />
             <label className="flex items-center gap-2 rounded-lg border px-3 py-2"><input type="checkbox" checked={precioForm.activo} onChange={(e) => setPrecioForm((f) => ({ ...f, activo: e.target.checked }))} />Activo</label>
             <input type="date" className="rounded-lg border px-3 py-2" value={precioForm.vigencia_desde} onChange={(e) => setPrecioForm((f) => ({ ...f, vigencia_desde: e.target.value }))} required />
             <input type="date" className="rounded-lg border px-3 py-2" value={precioForm.vigencia_hasta} onChange={(e) => setPrecioForm((f) => ({ ...f, vigencia_hasta: e.target.value }))} />
+            <div className="md:col-span-4 text-xs text-slate-600">
+              Tip: podés seleccionar múltiples categorías con Ctrl/Cmd + click.
+            </div>
             <div className="md:col-span-4 flex gap-2">
               <button className="rounded-lg bg-slate-900 px-4 py-2 text-white">{precioEditId ? "Guardar precio" : "Crear precio"}</button>
               {precioEditId && (
-                <button type="button" className="rounded-lg border px-4 py-2" onClick={() => { setPrecioEditId(null); setPrecioForm({ id_item_pago: "", id_categoria: "", monto: "", vigencia_desde: "", vigencia_hasta: "", activo: true }); }}>
+                <button type="button" className="rounded-lg border px-4 py-2" onClick={() => { setPrecioEditId(null); setPrecioForm({ id_item_pago: "", id_categorias: [], monto: "", vigencia_desde: "", vigencia_hasta: "", activo: true }); }}>
                   Cancelar
                 </button>
               )}
@@ -192,7 +225,7 @@ export function ArancelesPage() {
                           setPrecioEditId(p.id_precio_item);
                           setPrecioForm({
                             id_item_pago: String(p.id_item_pago),
-                            id_categoria: p.id_categoria ? String(p.id_categoria) : "",
+                            id_categorias: p.id_categoria ? [String(p.id_categoria)] : [],
                             monto: String(p.monto),
                             vigencia_desde: p.vigencia_desde,
                             vigencia_hasta: p.vigencia_hasta ?? "",
