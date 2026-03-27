@@ -10,3 +10,8 @@ npm install
 ```bash
 npm run dev
 ```
+
+## Deploy (Vercel)
+- Definí `VITE_API_BASE_URL` apuntando al backend Render con `/api/v1`.
+  - Ejemplo: `https://app-cfc.onrender.com/api/v1`
+- Luego hacé redeploy para que tome la variable nueva.

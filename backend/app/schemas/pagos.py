@@ -5,8 +5,9 @@ from pydantic import BaseModel, Field, HttpUrl
 
 class PagoCreate(BaseModel):
     id_jugador: int
+    id_item_pago: int | None = None
     fecha_pago: date | None = None
-    monto: float = Field(gt=0)
+    monto: float | None = Field(default=None, gt=0)
     mes_correspondiente: int = Field(ge=1, le=12)
     anio_correspondiente: int = Field(ge=2000, le=2100)
     metodo_pago: str = Field(min_length=1, max_length=80)
@@ -14,6 +15,7 @@ class PagoCreate(BaseModel):
 
 
 class PagoUpdate(BaseModel):
+    id_item_pago: int | None = None
     fecha_pago: date | None = None
     monto: float | None = Field(default=None, gt=0)
     mes_correspondiente: int | None = Field(default=None, ge=1, le=12)
@@ -32,8 +34,12 @@ class JugadorMini(BaseModel):
 class PagoOut(BaseModel):
     id_pago: int
     id_jugador: int
+    id_item_pago: int | None
+    id_precio_item: int | None
     fecha_pago: date
     monto: float
+    descripcion_item_snapshot: str | None
+    monto_snapshot: float | None
     mes_correspondiente: int
     anio_correspondiente: int
     metodo_pago: str

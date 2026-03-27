@@ -8,6 +8,7 @@
 1. Copiá `.env.example` a `.env`.
 2. Ejecutá `backend/db/schema.sql`.
 3. Si la base ya existía, aplicá `backend/db/migrations/003_pagos_jugador_restrict.sql`.
+4. Para pagos tabulados por ítem/precio, aplicá también `backend/db/migrations/005_items_precios_snapshot.sql`.
 
 ## Instalar
 ```bash
@@ -28,3 +29,8 @@ pip install -r requirements.txt
 ```bash
 uvicorn app.main:app --reload
 ```
+
+## Deploy (Render + Neon)
+- `DATABASE_URL` debe apuntar a Neon con SSL (`...?sslmode=require`).
+- Configurá `CORS_ORIGINS` con tu dominio Vercel (ej: `https://app-cfc-theta.vercel.app`).
+- Mantené `JWT_SECRET` y `SETUP_TOKEN` como secretos de entorno (no en git).

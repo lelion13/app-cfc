@@ -35,6 +35,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <NavItem to="/jugadores" label="Jugadores" />
             <NavItem to="/pagos" label="Pagos" />
             <NavItem to="/categorias" label="Categorías" />
+            {user?.rol === "Admin" && <NavItem to="/aranceles" label="Aranceles" />}
             {user?.rol === "Admin" && <NavItem to="/usuarios" label="Usuarios" />}
           </div>
         </aside>
