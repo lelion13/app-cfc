@@ -51,7 +51,7 @@ export function JugadorFormPage() {
         {msg && <div className="text-sm text-red-700 mt-2">{msg}</div>}
         <form onSubmit={save} className="mt-4 grid md:grid-cols-2 gap-3 text-sm">
           {(["nombre","apellido","fecha_nacimiento"] as const).map((k) => (
-            <input key={k} type={k==="fecha_nacimiento" ? "date" : k==="mail_tutor" ? "email" : "text"} className="rounded-lg border px-3 py-2" placeholder={k} value={(form as any)[k]} onChange={e => setForm(v => ({ ...v, [k]: e.target.value }))} />
+            <input key={k} type={k === "fecha_nacimiento" ? "date" : "text"} className="rounded-lg border px-3 py-2" placeholder={k} value={(form as any)[k]} onChange={e => setForm(v => ({ ...v, [k]: e.target.value }))} />
           ))}
           <select
             className="rounded-lg border px-3 py-2"
