@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS jugadores (
   mail_tutor TEXT,
   id_categoria BIGINT NOT NULL REFERENCES categorias(id_categoria) ON UPDATE CASCADE ON DELETE RESTRICT,
   activo BOOLEAN NOT NULL DEFAULT TRUE,
+  CONSTRAINT ck_jugadores_tipo_documento CHECK (tipo_documento IN ('DNI', 'LC', 'LE', 'PASAPORTE')),
   CONSTRAINT uq_jugadores_documento UNIQUE (tipo_documento, numero_documento)
 );
 

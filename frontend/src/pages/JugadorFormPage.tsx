@@ -5,8 +5,9 @@ import { ApiError, useApi } from "../lib/api";
 
 type Categoria = { id_categoria: number; descripcion: string };
 type FormState = { nombre: string; apellido: string; fecha_nacimiento: string; tipo_documento: string; numero_documento: string; domicilio: string; nombre_tutor: string; apellido_tutor: string; celular_tutor: string; mail_tutor: string; id_categoria: string; activo: boolean };
+const DOC_TYPES = ["DNI", "LC", "LE", "PASAPORTE"] as const;
 
-const empty: FormState = { nombre: "", apellido: "", fecha_nacimiento: "", tipo_documento: "", numero_documento: "", domicilio: "", nombre_tutor: "", apellido_tutor: "", celular_tutor: "", mail_tutor: "", id_categoria: "", activo: true };
+const empty: FormState = { nombre: "", apellido: "", fecha_nacimiento: "", tipo_documento: "DNI", numero_documento: "", domicilio: "", nombre_tutor: "", apellido_tutor: "", celular_tutor: "", mail_tutor: "", id_categoria: "", activo: true };
 
 export function JugadorFormPage() {
   const api = useApi();
@@ -25,6 +26,10 @@ export function JugadorFormPage() {
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    if (!DOC_TYPES.includes(form.tipo_documento as (typeof DOC_TYPES)[number])) {
+      setMsg("Tipo de documento inválido");
+      return;
+    }
     const payload = { ...form, id_categoria: Number(form.id_categoria), domicilio: form.domicilio || null, nombre_tutor: form.nombre_tutor || null, apellido_tutor: form.apellido_tutor || null, celular_tutor: form.celular_tutor || null, mail_tutor: form.mail_tutor || null };
     try {
       if (isEdit && id) {
@@ -45,8 +50,32 @@ export function JugadorFormPage() {
         <h1 className="text-xl font-semibold">{isEdit ? "Editar jugador" : "Nuevo jugador"}</h1>
         {msg && <div className="text-sm text-red-700 mt-2">{msg}</div>}
         <form onSubmit={save} className="mt-4 grid md:grid-cols-2 gap-3 text-sm">
-          {(["nombre","apellido","fecha_nacimiento","tipo_documento","numero_documento","domicilio","nombre_tutor","apellido_tutor","celular_tutor","mail_tutor"] as const).map((k) => (
+          {(["nombre","apellido","fecha_nacimiento"] as const).map((k) => (
             <input key={k} type={k==="fecha_nacimiento" ? "date" : k==="mail_tutor" ? "email" : "text"} className="rounded-lg border px-3 py-2" placeholder={k} value={(form as any)[k]} onChange={e => setForm(v => ({ ...v, [k]: e.target.value }))} />
+          ))}
+          <select
+            className="rounded-lg border px-3 py-2"
+            value={form.tipo_documento}
+            onChange={e => setForm(v => ({ ...v, tipo_documento: e.target.value }))}
+          >
+            {DOC_TYPES.map(dt => (
+              <option key={dt} value={dt}>
+                {dt}
+              </option>
+            ))}
+            {!DOC_TYPES.includes(form.tipo_documento as (typeof DOC_TYPES)[number]) && form.tipo_documento && (
+              <option value={form.tipo_documento}>{form.tipo_documento}</option>
+            )}
+          </select>
+          <input
+            type="text"
+            className="rounded-lg border px-3 py-2"
+            placeholder="numero_documento"
+            value={form.numero_documento}
+            onChange={e => setForm(v => ({ ...v, numero_documento: e.target.value }))}
+          />
+          {(["domicilio","nombre_tutor","apellido_tutor","celular_tutor","mail_tutor"] as const).map((k) => (
+            <input key={k} type={k==="mail_tutor" ? "email" : "text"} className="rounded-lg border px-3 py-2" placeholder={k} value={(form as any)[k]} onChange={e => setForm(v => ({ ...v, [k]: e.target.value }))} />
           ))}
           <select className="rounded-lg border px-3 py-2" value={form.id_categoria} onChange={e => setForm(v => ({ ...v, id_categoria: e.target.value }))}>
             <option value="">Categoría</option>{cats.map(c => <option key={c.id_categoria} value={String(c.id_categoria)}>{c.descripcion}</option>)}

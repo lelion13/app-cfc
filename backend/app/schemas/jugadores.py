@@ -1,13 +1,16 @@
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
+
+TipoDocumento = Literal["DNI", "LC", "LE", "PASAPORTE"]
 
 
 class JugadorBase(BaseModel):
     nombre: str = Field(min_length=2, max_length=80)
     apellido: str = Field(min_length=2, max_length=80)
     fecha_nacimiento: date
-    tipo_documento: str = Field(min_length=1, max_length=30)
+    tipo_documento: TipoDocumento
     numero_documento: str = Field(min_length=6, max_length=15)
     domicilio: str | None = Field(default=None, max_length=255)
     nombre_tutor: str | None = Field(default=None, max_length=80)
@@ -33,7 +36,7 @@ class JugadorUpdate(BaseModel):
     nombre: str | None = Field(default=None, min_length=2, max_length=80)
     apellido: str | None = Field(default=None, min_length=2, max_length=80)
     fecha_nacimiento: date | None = None
-    tipo_documento: str | None = Field(default=None, min_length=1, max_length=30)
+    tipo_documento: TipoDocumento | None = None
     numero_documento: str | None = Field(default=None, min_length=6, max_length=15)
     domicilio: str | None = Field(default=None, max_length=255)
     nombre_tutor: str | None = Field(default=None, max_length=80)
