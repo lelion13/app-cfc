@@ -13,6 +13,8 @@ type Props = {
   value: string;
   onChange: (id: string) => void;
   api: ReturnType<typeof useApi>;
+  /** Si se define, todas las búsquedas y el listado inicial quedan acotados a esa categoría. */
+  idCategoria?: number;
   placeholder?: string;
   className?: string;
   required?: boolean;
@@ -23,6 +25,7 @@ export function JugadorCombobox({
   value,
   onChange,
   api,
+  idCategoria,
   placeholder = "Buscar por nombre o apellido…",
   className = "",
   required = false,
@@ -58,22 +61,57 @@ export function JugadorCombobox({
 
   useEffect(() => {
     const q = query.trim();
+    if (q.length >= 1) {
+      return;
+    }
+    if (idCategoria == null || !open) {
+      if (idCategoria == null) {
+        setResults([]);
+        setLoading(false);
+      }
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    const p = new URLSearchParams({
+      page: "1",
+      page_size: "100",
+      activo: "true",
+      id_categoria: String(idCategoria),
+    });
+    api
+      .get<PageJugadores>(`/jugadores?${p.toString()}`)
+      .then((res) => {
+        if (!cancelled) setResults(res.items ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setResults([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, idCategoria, query, api]);
+
+  useEffect(() => {
+    const q = query.trim();
     if (q.length < 1) {
-      setResults([]);
-      setLoading(false);
       return;
     }
     const t = window.setTimeout(() => {
       setLoading(true);
-      const qs = new URLSearchParams({ q, page: "1", page_size: "50", activo: "true" });
+      const p = new URLSearchParams({ q, page: "1", page_size: "50", activo: "true" });
+      if (idCategoria != null) p.set("id_categoria", String(idCategoria));
       api
-        .get<PageJugadores>(`/jugadores?${qs.toString()}`)
+        .get<PageJugadores>(`/jugadores?${p.toString()}`)
         .then((res) => setResults(res.items ?? []))
         .catch(() => setResults([]))
         .finally(() => setLoading(false));
     }, 280);
     return () => window.clearTimeout(t);
-  }, [query, api]);
+  }, [query, api, idCategoria]);
 
   useEffect(() => {
     function onDocDown(e: MouseEvent) {
@@ -100,6 +138,9 @@ export function JugadorCombobox({
     setResults([]);
     inputRef.current?.focus();
   }
+
+  const scopedToCategory = idCategoria != null;
+  const qEmpty = query.trim().length < 1;
 
   return (
     <div ref={wrapRef} className={["relative", className].join(" ")}>
@@ -147,11 +188,13 @@ export function JugadorCombobox({
           role="listbox"
           className="absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-lg border bg-white py-1 shadow-md text-sm"
         >
-          {query.trim().length < 1 && <li className="px-3 py-2 text-slate-500">Escribí para buscar jugadores activos.</li>}
-          {query.trim().length >= 1 && loading && <li className="px-3 py-2 text-slate-500">Buscando…</li>}
-          {query.trim().length >= 1 && !loading && results.length === 0 && (
-            <li className="px-3 py-2 text-slate-500">Sin resultados.</li>
+          {qEmpty && !scopedToCategory && <li className="px-3 py-2 text-slate-500">Escribí para buscar jugadores activos.</li>}
+          {qEmpty && scopedToCategory && loading && <li className="px-3 py-2 text-slate-500">Cargando jugadores de la categoría…</li>}
+          {qEmpty && scopedToCategory && !loading && results.length === 0 && (
+            <li className="px-3 py-2 text-slate-500">No hay jugadores activos en esta categoría.</li>
           )}
+          {!qEmpty && loading && <li className="px-3 py-2 text-slate-500">Buscando…</li>}
+          {!qEmpty && !loading && results.length === 0 && <li className="px-3 py-2 text-slate-500">Sin resultados.</li>}
           {results.map((j) => (
             <li key={j.id_jugador}>
               <button

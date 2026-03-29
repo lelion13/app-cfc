@@ -34,6 +34,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="rounded-xl border bg-white p-3 space-y-1">
             <NavItem to="/jugadores" label="Jugadores" />
             <NavItem to="/pagos" label="Pagos" />
+            <NavItem to="/partidos" label="Partidos" />
             {(user?.rol === "Admin" || user?.rol === "Coordinador") && <NavItem to="/ingresos" label="Ingresos" />}
             {(user?.rol === "Admin" || user?.rol === "Coordinador") && <NavItem to="/categorias" label="Categorías" />}
             {(user?.rol === "Admin" || user?.rol === "Coordinador") && <NavItem to="/aranceles" label="Aranceles" />}

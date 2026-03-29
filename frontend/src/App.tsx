@@ -10,6 +10,7 @@ import { JugadorFormPage } from "./pages/JugadorFormPage";
 import { JugadoresPage } from "./pages/JugadoresPage";
 import { LoginPage } from "./pages/LoginPage";
 import { PagosPage } from "./pages/PagosPage";
+import { PartidosPage } from "./pages/PartidosPage";
 import { SetupPage } from "./pages/SetupPage";
 import { UsuariosPage } from "./pages/UsuariosPage";
 
@@ -24,6 +25,7 @@ export default function App() {
       <Route path="/jugadores/:id/editar" element={<ProtectedRoute><JugadorFormPage /></ProtectedRoute>} />
       <Route path="/jugadores/:id" element={<ProtectedRoute><JugadorDetailPage /></ProtectedRoute>} />
       <Route path="/pagos" element={<ProtectedRoute><PagosPage /></ProtectedRoute>} />
+      <Route path="/partidos" element={<ProtectedRoute><PartidosPage /></ProtectedRoute>} />
       <Route path="/ingresos" element={<ProtectedRoute allowRoles={["Admin", "Coordinador"]}><IngresosPage /></ProtectedRoute>} />
       <Route path="/aranceles" element={<ProtectedRoute allowRoles={["Admin", "Coordinador"]}><ArancelesPage /></ProtectedRoute>} />
       <Route path="/categorias" element={<ProtectedRoute allowRoles={["Admin", "Coordinador"]}><CategoriasPage /></ProtectedRoute>} />
