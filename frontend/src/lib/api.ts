@@ -3,6 +3,7 @@ import { getApiBase } from "./config";
 import { useAuth } from "../state/auth";
 
 export type ApiError = { status: number; detail: string };
+export { getApiBase };
 
 async function parseError(res: Response): Promise<ApiError> {
   try {
