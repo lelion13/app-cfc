@@ -35,7 +35,8 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-## Deploy (Render + Neon)
-- `DATABASE_URL` debe apuntar a Neon con SSL (`...?sslmode=require`).
-- Configurá `CORS_ORIGINS` con tu dominio Vercel (ej: `https://app-cfc-theta.vercel.app`).
+## Deploy (VPS Docker)
+- `DATABASE_URL` debe apuntar al servicio `db` en Docker Compose (ej: `postgresql+psycopg://postgres:***@db:5432/club`).
+- Configurá `CORS_ORIGINS` con el dominio final (ej: `https://cfc.lionapp.cloud`).
 - Mantené `JWT_SECRET` y `SETUP_TOKEN` como secretos de entorno (no en git).
+- El esquema se inicializa de forma explícita con `schema.sql` / migraciones (no por `create_all` al startup).

@@ -1,10 +1,8 @@
 import { useCallback, useMemo } from "react";
+import { getApiBase } from "./config";
 import { useAuth } from "../state/auth";
 
 export type ApiError = { status: number; detail: string };
-export function getApiBase() {
-  return (import.meta.env.VITE_API_BASE_URL as string) || "http://localhost:8000/api/v1";
-}
 
 async function parseError(res: Response): Promise<ApiError> {
   try {

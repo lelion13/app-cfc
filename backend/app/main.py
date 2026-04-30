@@ -2,8 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.db.models import Base
-from app.db.session import engine
 from app.routers import auth, categorias, fechas_partido, ingresos, items_pagos, jugadores, pagos, partidos, usuarios
 
 
@@ -34,8 +32,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-
-
-@app.on_event("startup")
-def startup() -> None:
-    Base.metadata.create_all(bind=engine)

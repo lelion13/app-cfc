@@ -1,0 +1,71 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: ghcr.io/lelion13/app-cfc-backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALG: ${JWT_ALG:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      SETUP_TOKEN: ${SETUP_TOKEN}
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.app-cfc-api.rule=Host(`cfc.lionapp.cloud`) && PathPrefix(`/api`)
+      - traefik.http.routers.app-cfc-api.entrypoints=websecure
+      - traefik.http.routers.app-cfc-api.tls=true
+      - traefik.http.routers.app-cfc-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.app-cfc-api.priority=100
+      - traefik.http.services.app-cfc-api.loadbalancer.server.port=8000
+
+  frontend:
+    image: ghcr.io/lelion13/app-cfc-frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.app-cfc-web.rule=Host(`cfc.lionapp.cloud`)
+      - traefik.http.routers.app-cfc-web.entrypoints=websecure
+      - traefik.http.routers.app-cfc-web.tls=true
+      - traefik.http.routers.app-cfc-web.tls.certresolver=letsencrypt
+      - traefik.http.routers.app-cfc-web.priority=10
+      - traefik.http.services.app-cfc-web.loadbalancer.server.port=80
+
+volumes:
+  db_data:

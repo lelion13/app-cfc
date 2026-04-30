@@ -223,8 +223,14 @@ export function PartidosPage() {
     const next = Math.max(0, Math.min(99, cur + delta));
     if (next === cur && delta < 0) return;
     try {
-      await api.patch(`/partidos/${p.id_partido}`, { [field]: next });
-      await loadDetalle(p.id_fecha_partido);
+      const updated = await api.patch<PartidoOut>(`/partidos/${p.id_partido}`, { [field]: next });
+      setDetalle((d) => {
+        if (!d || d.id_fecha_partido !== updated.id_fecha_partido) return d;
+        return {
+          ...d,
+          partidos: d.partidos.map((x) => (x.id_partido === updated.id_partido ? updated : x)),
+        };
+      });
     } catch (err) {
       const e2 = err as ApiError;
       setMsg(e2.status === 400 ? e2.detail || "No se puede actualizar el marcador" : "No se pudo actualizar");
@@ -235,8 +241,16 @@ export function PartidosPage() {
     setMsg(null);
     const hora = inputToTimeApi(horaInput);
     try {
-      await api.patch(`/partidos/${p.id_partido}`, { hora_partido: hora === undefined ? null : hora });
-      await loadDetalle(p.id_fecha_partido);
+      const updated = await api.patch<PartidoOut>(`/partidos/${p.id_partido}`, {
+        hora_partido: hora === undefined ? null : hora,
+      });
+      setDetalle((d) => {
+        if (!d || d.id_fecha_partido !== updated.id_fecha_partido) return d;
+        return {
+          ...d,
+          partidos: d.partidos.map((x) => (x.id_partido === updated.id_partido ? updated : x)),
+        };
+      });
       setMsg("Hora actualizada");
     } catch {
       setMsg("No se pudo guardar la hora");

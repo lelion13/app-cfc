@@ -11,7 +11,6 @@ npm install
 npm run dev
 ```
 
-## Deploy (Vercel)
-- Definí `VITE_API_BASE_URL` apuntando al backend Render con `/api/v1`.
-  - Ejemplo: `https://app-cfc.onrender.com/api/v1`
-- Luego hacé redeploy para que tome la variable nueva.
+## Deploy (VPS Docker)
+- Para dominio compartido con Traefik (`cfc.lionapp.cloud`), el frontend usa por defecto `/api/v1`.
+- Si necesitás un backend externo, definí `VITE_API_BASE_URL` con la URL completa del API.

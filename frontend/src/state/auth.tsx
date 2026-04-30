@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { getApiBase } from "../lib/config";
 
 type Role = "Admin" | "Coordinador" | "Operador";
 export type UserMe = {
@@ -27,7 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   async function fetchMe(nextToken: string) {
-    const base = import.meta.env.VITE_API_BASE_URL as string;
+    const base = getApiBase();
     const res = await fetch(`${base}/auth/me`, { headers: { Authorization: `Bearer ${nextToken}` } });
     if (!res.ok) throw new Error("Unauthorized");
     setUser((await res.json()) as UserMe);
