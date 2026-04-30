@@ -37,7 +37,7 @@ services:
       start_period: 20s
     labels:
       - traefik.enable=true
-      - traefik.http.routers.app-cfc-api.rule=Host(`cfc.lionapp.cloud`) && PathPrefix(`/api`)
+      - traefik.http.routers.app-cfc-api.rule=Host(`cfc.lionapp.cloud`) && (PathPrefix(`/api`) || Path(`/health`) || PathPrefix(`/docs`) || Path(`/openapi.json`))
       - traefik.http.routers.app-cfc-api.entrypoints=websecure
       - traefik.http.routers.app-cfc-api.tls=true
       - traefik.http.routers.app-cfc-api.tls.certresolver=letsencrypt
@@ -60,7 +60,7 @@ services:
       start_period: 20s
     labels:
       - traefik.enable=true
-      - traefik.http.routers.app-cfc-web.rule=Host(`cfc.lionapp.cloud`)
+      - traefik.http.routers.app-cfc-web.rule=Host(`cfc.lionapp.cloud`) && !PathPrefix(`/api`) && !Path(`/health`) && !PathPrefix(`/docs`) && !Path(`/openapi.json`)
       - traefik.http.routers.app-cfc-web.entrypoints=websecure
       - traefik.http.routers.app-cfc-web.tls=true
       - traefik.http.routers.app-cfc-web.tls.certresolver=letsencrypt
