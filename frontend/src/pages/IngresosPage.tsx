@@ -3,7 +3,6 @@ import { Layout } from "../components/Layout";
 import { useApi } from "../lib/api";
 
 type Categoria = { id_categoria: number; descripcion: string };
-type ItemPago = { id_item_pago: number; codigo: string; descripcion: string; activo: boolean };
 type IngresoResumen = { total_ingresos: number; cantidad_pagos: number };
 
 function currentMonth() {
@@ -17,7 +16,6 @@ function currentYear() {
 export function IngresosPage() {
   const api = useApi();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [itemsPago, setItemsPago] = useState<ItemPago[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resumen, setResumen] = useState<IngresoResumen>({ total_ingresos: 0, cantidad_pagos: 0 });
@@ -25,16 +23,14 @@ export function IngresosPage() {
   const [anio, setAnio] = useState(currentYear());
   const [mes, setMes] = useState(currentMonth());
   const [idCategoria, setIdCategoria] = useState("");
-  const [idItemPago, setIdItemPago] = useState("");
 
   const query = useMemo(() => {
     const p = new URLSearchParams();
     if (anio) p.set("anio", anio);
     if (mes) p.set("mes", mes);
     if (idCategoria) p.set("id_categoria", idCategoria);
-    if (idItemPago) p.set("id_item_pago", idItemPago);
     return p.toString();
-  }, [anio, mes, idCategoria, idItemPago]);
+  }, [anio, mes, idCategoria]);
 
   async function loadResumen() {
     setLoading(true);
@@ -56,7 +52,6 @@ export function IngresosPage() {
 
   useEffect(() => {
     api.get<Categoria[]>("/categorias").then(setCategorias).catch(() => setCategorias([]));
-    api.get<ItemPago[]>("/items-pago").then((res) => setItemsPago(res.filter((x) => x.activo))).catch(() => setItemsPago([]));
   }, [api]);
 
   return (
@@ -66,7 +61,7 @@ export function IngresosPage() {
           <h1 className="text-xl font-semibold">Ingresos</h1>
           <p className="text-sm text-slate-600">Resumen de ingresos según los filtros aplicados.</p>
 
-          <div className="grid md:grid-cols-4 gap-2 text-sm">
+          <div className="grid md:grid-cols-3 gap-2 text-sm">
             <input className="rounded-lg border px-3 py-2" placeholder="Año" value={anio} onChange={(e) => setAnio(e.target.value)} />
             <input className="rounded-lg border px-3 py-2" placeholder="Mes" value={mes} onChange={(e) => setMes(e.target.value)} />
             <select className="rounded-lg border px-3 py-2" value={idCategoria} onChange={(e) => setIdCategoria(e.target.value)}>
@@ -74,14 +69,6 @@ export function IngresosPage() {
               {categorias.map((c) => (
                 <option key={c.id_categoria} value={String(c.id_categoria)}>
                   {c.descripcion}
-                </option>
-              ))}
-            </select>
-            <select className="rounded-lg border px-3 py-2" value={idItemPago} onChange={(e) => setIdItemPago(e.target.value)}>
-              <option value="">Item de pago</option>
-              {itemsPago.map((it) => (
-                <option key={it.id_item_pago} value={String(it.id_item_pago)}>
-                  {it.descripcion}
                 </option>
               ))}
             </select>
@@ -97,7 +84,6 @@ export function IngresosPage() {
                 setAnio(currentYear());
                 setMes(currentMonth());
                 setIdCategoria("");
-                setIdItemPago("");
               }}
             >
               Limpiar

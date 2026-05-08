@@ -4,27 +4,12 @@ import { Layout } from "../components/Layout";
 import { ApiError, useApi } from "../lib/api";
 import { useAuth } from "../state/auth";
 
-type ItemPago = { id_item_pago: number; codigo: string; descripcion: string; activo: boolean };
-type PrecioItem = {
-  id_precio_item: number;
-  id_item_pago: number;
-  id_categoria: number | null;
-  monto: number;
-  vigencia_desde: string;
-  vigencia_hasta: string | null;
-  activo: boolean;
-};
-type Jugador = { id_jugador: number; nombre: string; apellido: string; id_categoria: number };
 const PAYMENT_METHODS = ["Efectivo", "Transferencia"] as const;
 type PagoItem = {
   id_pago: number;
   id_jugador: number;
-  id_item_pago: number | null;
-  id_precio_item: number | null;
   fecha_pago: string;
   monto: number;
-  descripcion_item_snapshot: string | null;
-  monto_snapshot: number | null;
   mes_correspondiente: number;
   anio_correspondiente: number;
   metodo_pago: string;
@@ -44,13 +29,16 @@ function currentYear() {
   return String(new Date().getFullYear());
 }
 
+function parseMontoInput(raw: string): number | null {
+  const n = Number(String(raw).trim().replace(",", "."));
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
+}
+
 export function PagosPage() {
   const api = useApi();
   const { user } = useAuth();
   const [items, setItems] = useState<PagoItem[]>([]);
-  const [jugadorFormMeta, setJugadorFormMeta] = useState<Jugador | null>(null);
-  const [itemsPago, setItemsPago] = useState<ItemPago[]>([]);
-  const [precioSugerido, setPrecioSugerido] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -63,7 +51,6 @@ export function PagosPage() {
 
   const [form, setForm] = useState({
     id_jugador: "",
-    id_item_pago: "",
     fecha_pago: todayIsoDate(),
     monto: "",
     mes_correspondiente: currentMonth(),
@@ -89,7 +76,7 @@ export function PagosPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.get<any[]>(`/pagos${query ? `?${query}` : ""}`);
+      const data = await api.get<PagoItem[]>(`/pagos${query ? `?${query}` : ""}`);
       setItems(data);
     } catch {
       setError("No se pudo cargar pagos");
@@ -103,67 +90,9 @@ export function PagosPage() {
     loadPagos();
   }, [api, query]);
 
-  useEffect(() => {
-    if (!form.id_jugador) {
-      setJugadorFormMeta(null);
-      return;
-    }
-    let cancelled = false;
-    api
-      .get<Jugador>(`/jugadores/${form.id_jugador}`)
-      .then((j) => {
-        if (!cancelled) setJugadorFormMeta(j);
-      })
-      .catch(() => {
-        if (!cancelled) setJugadorFormMeta(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [api, form.id_jugador]);
-
-  useEffect(() => {
-    api
-      .get<ItemPago[]>("/items-pago")
-      .then((res) => setItemsPago(res.filter((it) => it.activo)))
-      .catch(() => setItemsPago([]));
-  }, [api]);
-
-  useEffect(() => {
-    if (!form.id_item_pago || !form.id_jugador) {
-      setPrecioSugerido(null);
-      return;
-    }
-    if (!jugadorFormMeta) {
-      setPrecioSugerido(null);
-      return;
-    }
-    const jugador = jugadorFormMeta;
-    const fecha = form.fecha_pago || todayIsoDate();
-    const qs = new URLSearchParams({
-      item_id: form.id_item_pago,
-      id_categoria: String(jugador.id_categoria),
-      fecha,
-    });
-    api
-      .get<PrecioItem[]>(`/items-pago/precios?${qs.toString()}`)
-      .then((res) => {
-        const candidato = res[0];
-        if (!candidato) {
-          setPrecioSugerido(null);
-          setForm((f) => ({ ...f, monto: "" }));
-          return;
-        }
-        setPrecioSugerido(candidato.monto);
-        setForm((f) => ({ ...f, monto: String(candidato.monto) }));
-      })
-      .catch(() => setPrecioSugerido(null));
-  }, [api, form.id_item_pago, form.id_jugador, form.fecha_pago, jugadorFormMeta]);
-
   function resetForm() {
     setForm({
       id_jugador: "",
-      id_item_pago: "",
       fecha_pago: todayIsoDate(),
       monto: "",
       mes_correspondiente: currentMonth(),
@@ -171,7 +100,6 @@ export function PagosPage() {
       metodo_pago: "Efectivo",
       comprobante_url: ""
     });
-    setPrecioSugerido(null);
     setEditingId(null);
   }
 
@@ -182,14 +110,18 @@ export function PagosPage() {
       setMessage("Seleccioná un jugador de la lista de resultados");
       return;
     }
-    const payload: any = {
+    const montoNum = parseMontoInput(form.monto);
+    if (montoNum === null) {
+      setMessage("Ingresá un importe válido mayor a cero");
+      return;
+    }
+    const payload: Record<string, unknown> = {
       id_jugador: Number(form.id_jugador),
+      monto: montoNum,
       mes_correspondiente: Number(form.mes_correspondiente),
       anio_correspondiente: Number(form.anio_correspondiente),
       metodo_pago: form.metodo_pago.trim()
     };
-    if (form.id_item_pago) payload.id_item_pago = Number(form.id_item_pago);
-    if (editingId && !form.id_item_pago && form.monto) payload.monto = Number(form.monto);
     if (form.fecha_pago) payload.fecha_pago = form.fecha_pago;
     if (form.comprobante_url.trim()) payload.comprobante_url = form.comprobante_url.trim();
     try {
@@ -214,7 +146,6 @@ export function PagosPage() {
     setEditingId(p.id_pago);
     setForm({
       id_jugador: String(p.id_jugador),
-      id_item_pago: p.id_item_pago ? String(p.id_item_pago) : "",
       fecha_pago: p.fecha_pago ?? "",
       monto: String(p.monto ?? ""),
       mes_correspondiente: String(p.mes_correspondiente ?? ""),
@@ -287,14 +218,14 @@ export function PagosPage() {
               inputClassName="rounded-lg border px-3 py-2 w-full"
             />
             <input type="date" className="rounded-lg border px-3 py-2" value={form.fecha_pago} onChange={(e) => setForm((f) => ({ ...f, fecha_pago: e.target.value }))} />
-            <select className="rounded-lg border px-3 py-2" value={form.id_item_pago} onChange={(e) => setForm((f) => ({ ...f, id_item_pago: e.target.value }))} required={!editingId}>
-              <option value="">Ítem tabulado</option>
-              {itemsPago.map((it) => (
-                <option key={it.id_item_pago} value={String(it.id_item_pago)}>
-                  {it.descripcion}
-                </option>
-              ))}
-            </select>
+            <input
+              className="rounded-lg border px-3 py-2"
+              inputMode="decimal"
+              placeholder="Importe"
+              value={form.monto}
+              onChange={(e) => setForm((f) => ({ ...f, monto: e.target.value }))}
+              required
+            />
             <input className="rounded-lg border px-3 py-2" placeholder="Mes" value={form.mes_correspondiente} onChange={(e) => setForm((f) => ({ ...f, mes_correspondiente: e.target.value }))} required />
             <input className="rounded-lg border px-3 py-2" placeholder="Año" value={form.anio_correspondiente} onChange={(e) => setForm((f) => ({ ...f, anio_correspondiente: e.target.value }))} required />
             <select className="rounded-lg border px-3 py-2" value={form.metodo_pago} onChange={(e) => setForm((f) => ({ ...f, metodo_pago: e.target.value }))} required>
@@ -305,13 +236,6 @@ export function PagosPage() {
               ))}
             </select>
             <input className="rounded-lg border px-3 py-2 md:col-span-2" placeholder="Comprobante URL (opcional)" value={form.comprobante_url} onChange={(e) => setForm((f) => ({ ...f, comprobante_url: e.target.value }))} />
-            {form.id_item_pago && (
-              <div className="md:col-span-4 text-xs text-slate-600">
-                {precioSugerido !== null
-                  ? `Monto tabulado vigente: $${precioSugerido}. Este monto quedará congelado al registrar el pago.`
-                  : "No se encontró un precio vigente para el ítem/categoría/fecha seleccionados."}
-              </div>
-            )}
             <div className="md:col-span-4 flex gap-2">
               <button className="rounded-lg bg-slate-900 px-4 py-2 text-white">{editingId ? "Guardar cambios" : "Crear pago"}</button>
               {editingId && (
@@ -350,10 +274,7 @@ export function PagosPage() {
                         {p.mes_correspondiente}/{p.anio_correspondiente}
                       </td>
                       <td className="py-2">{p.fecha_pago}</td>
-                      <td className="py-2">
-                        ${p.monto}
-                        {p.descripcion_item_snapshot && <div className="text-xs text-slate-500">{p.descripcion_item_snapshot}</div>}
-                      </td>
+                      <td className="py-2">${p.monto}</td>
                       <td className="py-2">{p.metodo_pago}</td>
                       <td className="py-2">{p.comprobante_url ? <a className="underline" href={p.comprobante_url} target="_blank" rel="noreferrer">Ver</a> : "—"}</td>
                       <td className="py-2 space-x-2">

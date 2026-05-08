@@ -37,7 +37,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <NavItem to="/partidos" label="Partidos" />
             {(user?.rol === "Admin" || user?.rol === "Coordinador") && <NavItem to="/ingresos" label="Ingresos" />}
             {(user?.rol === "Admin" || user?.rol === "Coordinador") && <NavItem to="/categorias" label="Categorías" />}
-            {(user?.rol === "Admin" || user?.rol === "Coordinador") && <NavItem to="/aranceles" label="Aranceles" />}
             {user?.rol === "Admin" && <NavItem to="/usuarios" label="Usuarios" />}
           </div>
         </aside>
