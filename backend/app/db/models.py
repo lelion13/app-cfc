@@ -28,10 +28,13 @@ class Categoria(Base):
 
 class Jugador(Base):
     __tablename__ = "jugadores"
-    __table_args__ = (UniqueConstraint("tipo_documento", "numero_documento", name="uq_jugadores_documento"),)
+    __table_args__ = (
+        UniqueConstraint("tipo_documento", "numero_documento", name="uq_jugadores_documento"),
+        CheckConstraint("tipo_documento IN ('DNI', 'LC', 'LE', 'PASAPORTE')", name="ck_jugadores_tipo_documento"),
+    )
     id_jugador: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     nombre: Mapped[str] = mapped_column(Text, nullable=False)
-    apellido: Mapped[str] = mapped_column(Text, nullable=False)
+    apellido: Mapped[str] = mapped_column(Text, nullable=False, index=True)
     fecha_nacimiento: Mapped[date] = mapped_column(Date, nullable=False)
     tipo_documento: Mapped[str] = mapped_column(Text, nullable=False)
     numero_documento: Mapped[str] = mapped_column(Text, nullable=False)

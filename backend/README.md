@@ -5,15 +5,23 @@
 - PostgreSQL 14+
 
 ## Configuración
-1. Copiá `.env.example` a `.env`.
-2. Ejecutá `backend/db/schema.sql`.
-3. Si la base ya existía, aplicá `backend/db/migrations/003_pagos_jugador_restrict.sql`.
-4. Para pagos tabulados por ítem/precio, aplicá también `backend/db/migrations/005_items_precios_snapshot.sql`.
-5. Para el rol `Operador` (v8.0), aplicá `backend/db/migrations/006_rol_operador.sql` en bases que ya tengan el enum `rol_usuario` con solo `Admin`/`Coordinador`. En instalaciones nuevas desde `schema.sql` actualizado, el enum ya incluye `Operador`.
-6. Para partidos del campeonato (v8.1), aplicá `backend/db/migrations/007_partidos_goles.sql` si la base no tiene aún las tablas `partidos` y `goles_partido`.
-7. Para asociar cada partido a una categoría (v8.2), aplicá `backend/db/migrations/008_partidos_categoria.sql` en bases que ya tengan `partidos` sin `id_categoria`. **La migración trunca** `partidos` y `goles_partido`.
-8. Para fechas de encuentro y partidos por categoría (v8.01), aplicá `backend/db/migrations/009_partidos_fecha_padre.sql` en bases que aún tengan `partidos` con columnas `fecha_partido`/`rival` en la fila del partido. **La migración trunca** `partidos` y `goles_partido`. En instalaciones nuevas desde `schema.sql` actualizado, existen `fechas_partido` y `partidos` enlazados con `id_fecha_partido`, `hora_partido` y `goles_nuestro`.
-9. Si `partidos` quedó roto o a medias (por ejemplo `create_all` creó `fechas_partido` pero no alteró `partidos`), aplicá `backend/db/migrations/010_reset_partidos_v801.sql` con psql, o desde `backend` ejecutá `python scripts/apply_010_reset_partidos.py`. **Elimina** tablas `goles_partido` y `partidos`, las recrea con el esquema v8.01 y **vacía** `fechas_partido` (solo datos de partidos/fechas).
+1. Copiá `.env.example` a `.env` (`DATABASE_URL`, `JWT_SECRET`, etc.).
+2. **Esquema de base de datos (Alembic)** — desde la carpeta `backend` con el venv activado:
+   - Base **vacía**: `alembic upgrade head`
+   - Base **ya creada** con el mismo esquema (p. ej. cargaste `db/schema.sql` antes): una sola vez `alembic stamp 0001` para alinear la tabla `alembic_version` sin volver a crear tablas.
+3. Migraciones históricas en `backend/db/migrations/` quedan como referencia de cambios antiguos; el flujo nuevo es solo Alembic.
+
+## Alembic (resumen)
+```bash
+cd backend
+alembic current
+alembic upgrade head
+alembic revision -m "descripcion"  # luego editá upgrade/downgrade
+```
+En Docker (misma `DATABASE_URL` que el backend, típicamente host `db`):
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm backend alembic upgrade head
+```
 
 ## Instalar
 ```bash
@@ -39,4 +47,4 @@ uvicorn app.main:app --reload
 - `DATABASE_URL` debe apuntar al servicio `db` en Docker Compose (ej: `postgresql+psycopg://postgres:***@db:5432/club`).
 - Configurá `CORS_ORIGINS` con el dominio final (ej: `https://cfc.lionapp.cloud`).
 - Mantené `JWT_SECRET` y `SETUP_TOKEN` como secretos de entorno (no en git).
-- El esquema se inicializa de forma explícita con `schema.sql` / migraciones (no por `create_all` al startup).
+- El esquema se aplica con **Alembic** (`alembic upgrade head`); ver arriba.

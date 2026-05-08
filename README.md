@@ -24,14 +24,19 @@ El proyecto incluye:
 2. Ajustar secretos reales (`POSTGRES_PASSWORD`, `JWT_SECRET`, etc).
 
 ### Inicialización de base de datos (primer deploy)
-Con el stack levantado y la DB saludable, ejecutar desde el servidor:
+Con el stack levantado y la DB saludable, migrá con Alembic (la imagen `backend` incluye `alembic/`):
 
 ```bash
-docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T db \
-  psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < schema.sql
+docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm backend alembic upgrade head
 ```
 
-Si migrás una base existente, aplicar los scripts en `backend/db/migrations/` según corresponda antes de exponer tráfico.
+Si la base **ya tenía** el mismo esquema creado a mano (`schema.sql`), alineá solo la versión sin recrear tablas:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm backend alembic stamp 0001
+```
+
+`backend/db/schema.sql` sigue como referencia legible; el flujo operativo es **Alembic** (`backend/README.md`).
 
 ### Routing Traefik (dominio único)
 - Frontend y backend comparten `https://cfc.lionapp.cloud`.
