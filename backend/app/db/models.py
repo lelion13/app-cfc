@@ -162,7 +162,17 @@ class RendicionCaja(Base):
     __tablename__ = "rendiciones_caja"
     id_rendicion: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     id_caja: Mapped[int] = mapped_column(BigInteger, ForeignKey("cajas_usuario.id_caja", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False, index=True)
-    estado: Mapped[EstadoRendicionCaja] = mapped_column(Enum(EstadoRendicionCaja, name="estado_rendicion_caja"), nullable=False, default=EstadoRendicionCaja.Cerrada, server_default=EstadoRendicionCaja.Cerrada.value, index=True)
+    estado: Mapped[EstadoRendicionCaja] = mapped_column(
+        Enum(
+            EstadoRendicionCaja,
+            name="estado_rendicion_caja",
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+        ),
+        nullable=False,
+        default=EstadoRendicionCaja.Cerrada,
+        server_default=EstadoRendicionCaja.Cerrada.value,
+        index=True,
+    )
     total_sistema: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"), server_default="0")
     monto_contado: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     ajuste_manual: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"), server_default="0")
@@ -184,7 +194,15 @@ class MovimientoCaja(Base):
     id_caja: Mapped[int] = mapped_column(BigInteger, ForeignKey("cajas_usuario.id_caja", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False, index=True)
     id_pago: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("pagos.id_pago", onupdate="CASCADE", ondelete="SET NULL"), nullable=True, index=True)
     id_rendicion: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("rendiciones_caja.id_rendicion", onupdate="CASCADE", ondelete="SET NULL"), nullable=True, index=True)
-    tipo: Mapped[TipoMovimientoCaja] = mapped_column(Enum(TipoMovimientoCaja, name="tipo_movimiento_caja"), nullable=False, index=True)
+    tipo: Mapped[TipoMovimientoCaja] = mapped_column(
+        Enum(
+            TipoMovimientoCaja,
+            name="tipo_movimiento_caja",
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+        ),
+        nullable=False,
+        index=True,
+    )
     monto: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     metodo_pago: Mapped[str | None] = mapped_column(Text)
     descripcion: Mapped[str | None] = mapped_column(Text)
