@@ -136,7 +136,8 @@ export function PagosPage() {
       await loadPagos();
     } catch (e) {
       const err = e as ApiError;
-      if (err.status === 409) setMessage("Ya existe un pago para ese jugador y período");
+      if (err.status === 409 && err.detail.includes("closed rendicion")) setMessage("Este pago ya fue rendido y no se puede modificar");
+      else if (err.status === 409) setMessage("Ya existe un pago para ese jugador y período");
       else if (err.status === 404) setMessage("Jugador no encontrado");
       else setMessage("No se pudo guardar el pago");
     }
@@ -169,6 +170,7 @@ export function PagosPage() {
     } catch (e) {
       const err = e as ApiError;
       if (err.status === 403) setMessage("No tenés permisos para eliminar pagos");
+      else if (err.status === 409 && err.detail.includes("closed rendicion")) setMessage("Este pago ya fue rendido y no se puede eliminar");
       else setMessage("No se pudo eliminar el pago");
     }
   }

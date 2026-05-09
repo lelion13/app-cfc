@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import auth, categorias, fechas_partido, ingresos, jugadores, pagos, partidos, usuarios
+from app.routers import auth, cajas, categorias, fechas_partido, ingresos, jugadores, pagos, partidos, usuarios
 
 
 def create_app() -> FastAPI:
@@ -21,6 +21,7 @@ def create_app() -> FastAPI:
 
     app.include_router(auth.router, prefix="/api/v1")
     app.include_router(categorias.router, prefix="/api/v1")
+    app.include_router(cajas.router, prefix="/api/v1")
     app.include_router(ingresos.router, prefix="/api/v1")
     app.include_router(jugadores.router, prefix="/api/v1")
     app.include_router(pagos.router, prefix="/api/v1")

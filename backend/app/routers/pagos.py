@@ -5,10 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
-from app.db.models import Jugador, Pago, RolUsuario
+from app.db.models import Jugador, Pago, RolUsuario, TipoMovimientoCaja, Usuario
 from app.db.session import get_db
 from app.deps.auth import require_role
 from app.schemas.pagos import PagoCreate, PagoOut, PagoUpdate
+from app.services.caja import add_pago_movimiento, assert_pago_not_rendido
 
 router = APIRouter(prefix="/pagos", tags=["pagos"])
 
@@ -30,16 +31,18 @@ def list_pagos(id_jugador: int | None = None, anio: int | None = Query(default=N
 
 
 @router.post("", response_model=PagoOut, status_code=status.HTTP_201_CREATED)
-def create_pago(body: PagoCreate, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador, RolUsuario.Operador))):
+def create_pago(body: PagoCreate, db: Session = Depends(get_db), user: Usuario = Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador, RolUsuario.Operador))):
     jugador = db.get(Jugador, body.id_jugador)
     if not jugador:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Jugador not found")
     data = body.model_dump()
     if data.get("fecha_pago") is None:
         data["fecha_pago"] = date.today()
-    pago = Pago(**data)
+    pago = Pago(**data, created_by_user_id=user.id_usuario)
     db.add(pago)
     try:
+        db.flush()
+        add_pago_movimiento(db, pago=pago, actor=user, amount=Decimal(str(body.monto)), tipo=TipoMovimientoCaja.PagoAlta)
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -57,13 +60,27 @@ def get_pago(id_pago: int, db: Session = Depends(get_db), _user=Depends(require_
 
 
 @router.patch("/{id_pago}", response_model=PagoOut)
-def update_pago(id_pago: int, body: PagoUpdate, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador, RolUsuario.Operador))):
+def update_pago(id_pago: int, body: PagoUpdate, db: Session = Depends(get_db), user: Usuario = Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador, RolUsuario.Operador))):
     pago = db.get(Pago, id_pago)
     if not pago:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    assert_pago_not_rendido(db, pago.id_pago)
+    original_monto = Decimal(str(pago.monto))
+    original_metodo = pago.metodo_pago
     patch = body.model_dump(exclude_unset=True)
     for k, v in patch.items():
         setattr(pago, k, v)
+    if "monto" in patch:
+        nuevo_monto = Decimal(str(patch["monto"]))
+        delta = nuevo_monto - original_monto
+        add_pago_movimiento(
+            db,
+            pago=pago,
+            actor=user,
+            amount=delta,
+            tipo=TipoMovimientoCaja.PagoEdicionAjuste,
+            descripcion=f"Ajuste por edición de pago (método original: {original_metodo})",
+        )
     try:
         db.commit()
     except IntegrityError:
@@ -73,10 +90,13 @@ def update_pago(id_pago: int, body: PagoUpdate, db: Session = Depends(get_db), _
 
 
 @router.delete("/{id_pago}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_pago(id_pago: int, db: Session = Depends(get_db), _user=Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
+def delete_pago(id_pago: int, db: Session = Depends(get_db), user: Usuario = Depends(require_role(RolUsuario.Admin, RolUsuario.Coordinador))):
     pago = db.get(Pago, id_pago)
     if not pago:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    assert_pago_not_rendido(db, pago.id_pago)
+    amount = Decimal(str(pago.monto)) * Decimal("-1")
+    add_pago_movimiento(db, pago=pago, actor=user, amount=amount, tipo=TipoMovimientoCaja.PagoEliminacion)
     db.delete(pago)
     try:
         db.commit()

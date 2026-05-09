@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { CajasPage } from "./pages/CajasPage";
 import { CategoriasPage } from "./pages/CategoriasPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { IngresosPage } from "./pages/IngresosPage";
@@ -26,6 +27,7 @@ export default function App() {
       <Route path="/pagos" element={<ProtectedRoute><PagosPage /></ProtectedRoute>} />
       <Route path="/partidos" element={<ProtectedRoute><PartidosPage /></ProtectedRoute>} />
       <Route path="/ingresos" element={<ProtectedRoute allowRoles={["Admin", "Coordinador"]}><IngresosPage /></ProtectedRoute>} />
+      <Route path="/cajas" element={<ProtectedRoute><CajasPage /></ProtectedRoute>} />
       <Route path="/categorias" element={<ProtectedRoute allowRoles={["Admin", "Coordinador"]}><CategoriasPage /></ProtectedRoute>} />
       <Route path="/usuarios" element={<ProtectedRoute allowRoles={["Admin"]}><UsuariosPage /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

@@ -18,6 +18,17 @@ class RolUsuario(str, enum.Enum):
     Operador = "Operador"
 
 
+class TipoMovimientoCaja(str, enum.Enum):
+    PagoAlta = "PAGO_ALTA"
+    PagoEdicionAjuste = "PAGO_EDICION_AJUSTE"
+    PagoEliminacion = "PAGO_ELIMINACION"
+    RendicionAjuste = "RENDICION_AJUSTE"
+
+
+class EstadoRendicionCaja(str, enum.Enum):
+    Cerrada = "CERRADA"
+
+
 class Categoria(Base):
     __tablename__ = "categorias"
     id_categoria: Mapped[int] = mapped_column(BigInteger, primary_key=True)
@@ -60,6 +71,7 @@ class Pago(Base):
     )
     id_pago: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     id_jugador: Mapped[int] = mapped_column(BigInteger, ForeignKey("jugadores.id_jugador", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False, index=True)
+    created_by_user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("usuarios.id_usuario", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False, index=True)
     fecha_pago: Mapped[date] = mapped_column(Date, nullable=False, server_default=func.current_date())
     monto: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     mes_correspondiente: Mapped[int] = mapped_column(SmallInteger, nullable=False)
@@ -67,6 +79,8 @@ class Pago(Base):
     metodo_pago: Mapped[str] = mapped_column(Text, nullable=False)
     comprobante_url: Mapped[str | None] = mapped_column(Text)
     jugador: Mapped[Jugador] = relationship(back_populates="pagos")
+    created_by_user: Mapped["Usuario"] = relationship(back_populates="pagos_registrados")
+    movimientos_caja: Mapped[list["MovimientoCaja"]] = relationship(back_populates="pago")
 
 
 class FechaPartido(Base):
@@ -126,3 +140,57 @@ class Usuario(Base):
     activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    pagos_registrados: Mapped[list[Pago]] = relationship(back_populates="created_by_user")
+    caja: Mapped["CajaUsuario | None"] = relationship(back_populates="usuario")
+    rendiciones_cerradas: Mapped[list["RendicionCaja"]] = relationship(back_populates="cerrada_por_usuario")
+    movimientos_caja_creados: Mapped[list["MovimientoCaja"]] = relationship(back_populates="created_by_user")
+
+
+class CajaUsuario(Base):
+    __tablename__ = "cajas_usuario"
+    id_caja: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id_usuario: Mapped[int] = mapped_column(BigInteger, ForeignKey("usuarios.id_usuario", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False, unique=True, index=True)
+    saldo_actual: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"), server_default="0")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    usuario: Mapped[Usuario] = relationship(back_populates="caja")
+    movimientos: Mapped[list["MovimientoCaja"]] = relationship(back_populates="caja")
+    rendiciones: Mapped[list["RendicionCaja"]] = relationship(back_populates="caja")
+
+
+class RendicionCaja(Base):
+    __tablename__ = "rendiciones_caja"
+    id_rendicion: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id_caja: Mapped[int] = mapped_column(BigInteger, ForeignKey("cajas_usuario.id_caja", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False, index=True)
+    estado: Mapped[EstadoRendicionCaja] = mapped_column(Enum(EstadoRendicionCaja, name="estado_rendicion_caja"), nullable=False, default=EstadoRendicionCaja.Cerrada, server_default=EstadoRendicionCaja.Cerrada.value, index=True)
+    total_sistema: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"), server_default="0")
+    monto_contado: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+    ajuste_manual: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"), server_default="0")
+    motivo_ajuste: Mapped[str | None] = mapped_column(Text)
+    comprobante_url: Mapped[str | None] = mapped_column(Text)
+    cerrada_por: Mapped[int] = mapped_column(BigInteger, ForeignKey("usuarios.id_usuario", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False, index=True)
+    cerrada_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
+    caja: Mapped[CajaUsuario] = relationship(back_populates="rendiciones")
+    cerrada_por_usuario: Mapped[Usuario] = relationship(back_populates="rendiciones_cerradas")
+    movimientos: Mapped[list["MovimientoCaja"]] = relationship(back_populates="rendicion")
+
+
+class MovimientoCaja(Base):
+    __tablename__ = "movimientos_caja"
+    __table_args__ = (
+        CheckConstraint("monto != 0", name="ck_movimientos_caja_monto_no_cero"),
+    )
+    id_movimiento: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id_caja: Mapped[int] = mapped_column(BigInteger, ForeignKey("cajas_usuario.id_caja", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False, index=True)
+    id_pago: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("pagos.id_pago", onupdate="CASCADE", ondelete="SET NULL"), nullable=True, index=True)
+    id_rendicion: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("rendiciones_caja.id_rendicion", onupdate="CASCADE", ondelete="SET NULL"), nullable=True, index=True)
+    tipo: Mapped[TipoMovimientoCaja] = mapped_column(Enum(TipoMovimientoCaja, name="tipo_movimiento_caja"), nullable=False, index=True)
+    monto: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    metodo_pago: Mapped[str | None] = mapped_column(Text)
+    descripcion: Mapped[str | None] = mapped_column(Text)
+    created_by: Mapped[int] = mapped_column(BigInteger, ForeignKey("usuarios.id_usuario", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
+    caja: Mapped[CajaUsuario] = relationship(back_populates="movimientos")
+    pago: Mapped[Pago | None] = relationship(back_populates="movimientos_caja")
+    rendicion: Mapped[RendicionCaja | None] = relationship(back_populates="movimientos")
+    created_by_user: Mapped[Usuario] = relationship(back_populates="movimientos_caja_creados")

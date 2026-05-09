@@ -6,6 +6,7 @@ from app.db.models import RolUsuario, Usuario
 from app.db.session import get_db
 from app.deps.auth import require_role
 from app.schemas.usuarios import UserCreate, UserOut, UserUpdate
+from app.services.caja import ensure_caja_for_user
 from app.security.passwords import hash_password
 
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])
@@ -21,6 +22,8 @@ def create_user(body: UserCreate, db: Session = Depends(get_db), _user=Depends(r
     user = Usuario(username=body.username, password_hash=hash_password(body.password), rol=RolUsuario(body.rol))
     db.add(user)
     try:
+        db.flush()
+        ensure_caja_for_user(db, user.id_usuario)
         db.commit()
     except IntegrityError:
         db.rollback()

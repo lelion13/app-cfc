@@ -11,6 +11,7 @@ from app.db.session import get_db
 from app.deps.auth import get_current_user
 from app.schemas.auth import BootstrapRequest, BootstrapStatusOut, LoginRequest, TokenResponse
 from app.schemas.usuarios import UserOut
+from app.services.caja import ensure_caja_for_user
 from app.security.jwt import create_access_token
 from app.security.passwords import hash_password, verify_password
 
@@ -42,6 +43,8 @@ def bootstrap(body: BootstrapRequest, db: Session = Depends(get_db)) -> Usuario:
     user = Usuario(username=body.username, password_hash=hash_password(body.password), rol=RolUsuario.Admin)
     db.add(user)
     try:
+        db.flush()
+        ensure_caja_for_user(db, user.id_usuario)
         db.commit()
     except IntegrityError:
         db.rollback()
